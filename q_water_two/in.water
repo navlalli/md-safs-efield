@@ -1,0 +1,54 @@
+# Two water molecules spaced 2 Angstrom apart in z-direction subject to an external electric field in z-direction
+
+# Initialisation
+units real
+dimension 3
+atom_style charge
+boundary p p m
+
+read_data       ../data.water.two
+
+variable atom1 string O
+variable atom2 string H
+pair_style      reaxff NULL safezone 3.0 mincap 150
+pair_coeff      * * ../../reaxff/zhang_2017_water.reax ${atom1} ${atom2}
+
+# Charge equilibration
+if "${qcalc} == qeqa" then &
+    "fix qcomp all qeq/reaxff 1 0.0 10.0 1e-10 reaxff" &
+elif "${qcalc} == qeqr" &
+    "fix qcomp all qeq/rel/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/oh_exp.txt" &
+elif "${qcalc} == qtpie" &
+    "fix qcomp all qtpie/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/oh_exp.txt"
+
+thermo_style custom step temp press density ke pe etotal
+thermo_modify flush yes
+thermo 100
+
+# Minimisation
+neigh_modify every 1 delay 0 check yes
+group oxy type 1
+fix freeze oxy setforce 0.0 0.0 0.0
+minimize 1.0e-8 1.0e-8 100000 100000
+unfix freeze
+reset_timestep 0
+
+# Run
+timestep 0.1
+neigh_modify every 10 delay 0 check yes
+
+fix nve all nve
+fix reflect all wall/reflect zlo -50.0 zhi 50.0
+
+if "${qcalc} == qeqa" then &
+    "dump drun all custom 1000 dump.run id element q x y z vx vy vz" &
+else &
+    "dump drun all custom 1000 dump.run id element q x y z vx vy vz f_qcomp"
+dump_modify drun element ${atom1} ${atom2} sort id
+
+# Run without external electric field
+run 150000
+
+# Run with external electric field
+fix efield all efield 0.0 0.0 0.05
+run 150000
