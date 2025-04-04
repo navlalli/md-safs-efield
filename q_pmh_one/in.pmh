@@ -1,0 +1,87 @@
+# One pentamethylheptane molecule in an external electric field
+
+# Initialisation
+units real
+dimension 3
+atom_style charge
+boundary p p p
+
+read_data       ../data_qeq.pmh
+
+variable atom1 string H
+variable atom2 string C
+pair_style      reaxff NULL safezone 3.0 mincap 150
+pair_coeff      * * ../../reaxff/ashraf_2016_cho.reax ${atom1} ${atom2}
+
+# Charge equilibration
+if "${qcalc} == qeqa" then &
+    "fix qeqa all qeq/reaxff 1 0.0 10.0 1e-10 reaxff" &
+elif "${qcalc} == qeqr" &
+    "fix qeqr all qeq/rel/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/hco_exp.txt scale ${scale}" &
+elif "${qcalc} == qtpie" &
+    "fix qtpie all qtpie/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/hco_exp.txt scale ${scale}"
+
+# Compute and save charges without efield
+dump drun all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun first yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.01
+fix efield all efield 0.0 0.0 0.01
+dump drun2 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun2 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.02
+fix efield all efield 0.0 0.0 0.02
+dump drun3 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun3 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.03
+fix efield all efield 0.0 0.0 0.03
+dump drun4 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun4 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.04
+fix efield all efield 0.0 0.0 0.04
+dump drun5 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun5 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.05
+fix efield all efield 0.0 0.0 0.05
+dump drun6 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun6 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.06
+fix efield all efield 0.0 0.0 0.06
+dump drun7 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun7 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.07
+fix efield all efield 0.0 0.0 0.07
+dump drun8 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun8 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.08
+fix efield all efield 0.0 0.0 0.08
+dump drun9 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun9 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.09
+fix efield all efield 0.0 0.0 0.09
+dump drun10 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun10 first yes append yes sort id element ${atom1} ${atom2}
+run 0
+
+# Compute and save charges with efield = 0.10
+fix efield all efield 0.0 0.0 0.10
+dump drun11 all custom 1 dump.run id element q x y z ix iy iz
+dump_modify drun11 first yes append yes sort id element ${atom1} ${atom2}
+run 0
