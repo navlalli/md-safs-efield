@@ -1,0 +1,35 @@
+# H2O and CO2
+# Must remove restriction in fix_qeq_reaxff.cpp to run with QEqA
+
+# Initialisation
+units real
+dimension 3
+atom_style charge
+boundary p p p
+
+read_data       ../data_dz${dz}.water_co2
+
+variable atom1 string H
+variable atom2 string C
+variable atom3 string O
+pair_style      reaxff NULL safezone 3.0 mincap 150
+pair_coeff      * * ../../reaxff/ashraf_2016_cho.reax ${atom1} ${atom2} ${atom3}
+
+# Charge equilibration
+if "${qcalc} == qeqa" then &
+    "fix qeqa all qeq/reaxff 1 0.0 10.0 1e-10 reaxff" &
+elif "${qcalc} == qeqr" &
+    "fix qeqr all qeq/rel/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/hco_exp.txt" &
+elif "${qcalc} == qtpie" &
+    "fix qtpie all qtpie/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/hco_exp.txt"
+
+# Compute and save charges without efield
+dump drun all custom 1 dump_dz${dz}_ez${ez}.run id element q x y z
+dump_modify drun first yes sort id element ${atom1} ${atom2} ${atom3}
+run 0
+
+# Compute and save charges with efield
+fix efield all efield 0.0 0.0 ${ez}
+dump drun2 all custom 1 dump_dz${dz}_ez${ez}.run id element q x y z
+dump_modify drun2 first yes append yes sort id element ${atom1} ${atom2} ${atom3}
+run 0
