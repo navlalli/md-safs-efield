@@ -1,0 +1,59 @@
+# 2,2,4,6,6-pentamethylheptane in oxygen
+
+# Initialisation
+units real
+dimension 3
+atom_style charge
+boundary p p m
+
+# System definition
+read_data ../../pmh_combustion/data_rho200.fuel_system
+
+# Force field + charge equilibration
+variable atom1 string H
+variable atom2 string C
+variable atom3 string O
+pair_style reaxff NULL checkqeq yes safezone 2.0 mincap 500 minhbonds 50
+pair_coeff * * ../../reaxff/ashraf_2016_cho.reax ${atom1} ${atom2} ${atom3}
+
+# Charge equilibration
+if "${qcalc} == qeqa" then &
+    "fix qcomp all qeq/reaxff 1 0.0 10.0 1e-10 reaxff" &
+elif "${qcalc} == qeqr" &
+    "fix qcomp all qeq/rel/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/hco_exp.txt" &
+elif "${qcalc} == qtpie" &
+    "fix qcomp all qtpie/reaxff 1 0.0 10.0 1e-10 reaxff ../../reaxff/hco_exp.txt"
+
+thermo 100
+thermo_style custom step temp press density ke etotal
+thermo_modify flush yes
+
+# Minimisation
+neigh_modify every 1 delay 0 check yes
+minimize 1.0e-8 1.0e-8 100000 100000
+reset_timestep 0
+
+# Run
+timestep 0.1
+neigh_modify every 10 delay 0 check yes
+
+variable seednum equal 108 # Random pos integer 
+variable temp equal 1500
+velocity all create ${temp} ${seednum} dist gaussian # Set initial velocities
+
+fix species all reaxff/species 1 1 200 species.run element ${atom1} ${atom2} ${atom3}
+fix nvt all nvt temp ${temp} ${temp} $(500.0*dt)
+fix reflect all wall/reflect zlo -28.7383 zhi 28.7383
+
+if "${qcalc} == qeqa" then &
+    "dump drun all custom 1000 dump.run id element q f_species x y z vx vy vz" &
+else &
+    "dump drun all custom 1000 dump.run id element q f_species x y z vx vy vz f_qcomp"
+dump_modify drun element ${atom1} ${atom2} ${atom3} sort id
+
+# Run without external electric field
+run 2500000
+
+# Run with external electric field
+fix ef all efield 0.0 0.0 0.05
+run 2500000
