@@ -17,7 +17,7 @@ cd ${case_name}
 echo "Running ${case_name}"
 
 # Run LAMMPS
-mpirun -n 12 ~/lammps-2Apr2025/build/lmp -nocite -log log.run \
+mpirun -n 64 ~/lammps-2Apr2025/build/lmp -nocite -log log.run \
 	-var qcalc ${qcalc} \
 	-var tmode ${tmode} \
 	-var case_ind ${case_index} \
