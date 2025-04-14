@@ -1,0 +1,62 @@
+# Combustion of 2,2,4,6,6-pentamethylheptane in oxygen - equilibration at 1500 K
+
+# Initialisation
+units real
+dimension 3
+atom_style charge
+boundary p p p
+
+# System definition 
+read_data ../../data_rho200.fuel_system
+
+# Force field + charge equilibration
+variable atom1 string H
+variable atom2 string C
+variable atom3 string O
+pair_style reaxff NULL checkqeq yes safezone 2.0 mincap 500 minhbonds 50
+pair_coeff * * ../../../reaxff/ashraf_2016_cho_equil.reax ${atom1} ${atom2} ${atom3}
+
+# Charge equilibration
+if "${qcalc} == qeq" then &
+    "fix qeq all qeq/reaxff 1 0.0 10.0 1e-10 reaxff" &
+elif "${qcalc} == qtpie" &
+    "fix qtpie all qtpie/reaxff 1 0.0 10.0 1e-10 reaxff ../../../reaxff/hco_exp.txt"
+
+thermo 100
+thermo_style custom step temp press density ke pe etotal epair
+thermo_modify flush yes
+
+# Minimisation
+neigh_modify every 1 delay 0 check yes
+dump dmin all custom 1000000 dump.min id element q x y z vx vy vz
+dump_modify dmin first yes element ${atom1} ${atom2} ${atom3}
+minimize 1.0e-8 1.0e-8 100000 100000
+undump dmin
+
+# Equilibration
+reset_timestep 0
+thermo 1000
+timestep 0.1
+neigh_modify every 5 delay 0 check yes
+
+variable temp equal 1500 # Equilibration temperature
+velocity all create ${temp} ${case_ind} dist gaussian # Set initial velocities - use index for seed
+
+fix species all reaxff/species 1 1 200 species.equil element ${atom1} ${atom2} ${atom3}
+
+# Thermostat
+if "${tmode} == nhoover" then &
+    "fix nvt all nvt temp ${temp} ${temp} $(500.0*dt)" &
+elif "${tmode} == csvr" &
+    "fix csvr all temp/csvr ${temp} ${temp} $(500.0*dt) ${case_ind}" &
+    "fix nve all nve"
+
+if "${qcalc} == qeq" then &
+    "dump dequil all custom 1000 dump.equil id element q f_species x y z vx vy vz ix iy iz" &
+elif "${qcalc} == qtpie" &
+    "dump dequil all custom 1000 dump.equil id element q f_species x y z vx vy vz ix iy iz f_qtpie"
+dump_modify dequil element ${atom1} ${atom2} ${atom3} sort id
+
+run 1000000
+
+write_restart restart.equil # Write restart file after equilibration
