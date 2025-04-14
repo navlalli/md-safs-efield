@@ -1,0 +1,74 @@
+# Combustion of 2,2,4,6,6-pentamethylheptane in oxygen with an external electric field 
+
+# Initialisation
+units real
+dimension 3
+atom_style charge
+boundary p p p
+
+# System definition 
+# Use nhoover for restarting nve sims
+if "${tmode} == nve" then &
+    "variable tmode_restart string nhoover" &
+else &
+    "variable tmode_restart string ${tmode}"
+
+if "${qcalc} == qeq" then &
+    "read_restart ../../../qeq_equil_${tmode_restart}_temp2000/equil_${case_ind}/restart.equil" &
+elif "${qcalc} == qeqr" &
+    "read_restart ../../../qeq_equil_${tmode_restart}_temp2000/equil_${case_ind}/restart.equil" &
+elif "${qcalc} == qtpie" &
+    "read_restart ../../../${qcalc}_equil_${tmode_restart}_temp2000/equil_${case_ind}/restart.equil"
+
+reset_timestep 0
+
+# Force field
+variable atom1 string H
+variable atom2 string C
+variable atom3 string O
+pair_style reaxff NULL checkqeq yes safezone 2.0 mincap 500 minhbonds 50
+pair_coeff * * ../../../../reaxff/ashraf_2016_cho.reax ${atom1} ${atom2} ${atom3}
+
+# Charge equilibration
+if "${qcalc} == qeq" then &
+    "fix qeq all qeq/reaxff 1 0.0 10.0 1e-10 reaxff" &
+elif "${qcalc} == qeqr" &
+    "fix qcomp all qeq/rel/reaxff 1 0.0 10.0 1e-10 reaxff ../../../../reaxff/hco_exp.txt" &
+elif "${qcalc} == qtpie" &
+    "fix qcomp all qtpie/reaxff 1 0.0 10.0 1e-10 reaxff ../../../../reaxff/hco_exp.txt"
+
+# Simulation settings
+timestep 0.1
+neigh_modify every 10 delay 0 check yes
+
+# Thermostat or nve
+if "${tmode} == nhoover" then &
+    "variable temp equal 2000" &
+    "fix nvt all nvt temp ${temp} ${temp} $(2000.0*dt)" &
+elif "${tmode} == csvr" &
+    "variable temp equal 2000" &
+    "fix csvr all temp/csvr ${temp} ${temp} $(2000.0*dt) ${case_ind}" &
+    "fix nve all nve" &
+elif "${tmode} == nve" &
+    "fix nve all nve"
+
+# Efield
+fix efield all efield 0.0 0.0 ${ef}
+
+# Simulation output
+fix species all reaxff/species 1 1 200 species.run element ${atom1} ${atom2} ${atom3}
+
+thermo 200
+thermo_style custom step temp press density ke pe etotal epair f_efield
+thermo_modify flush yes
+
+if "${qcalc} == qeq" then &
+    "dump drun all custom 1000 dump.run id element q f_species x y z vx vy vz ix iy iz" &
+else &
+    "dump drun all custom 1000 dump.run id element q f_species x y z vx vy vz ix iy iz f_qcomp"
+dump_modify drun element ${atom1} ${atom2} ${atom3} sort id
+
+restart 10000000 restart*.run
+run 25000000
+
+write_restart restart.run # Write restart file after simulation run
