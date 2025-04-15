@@ -19,6 +19,7 @@ The following table describes the contents of this repository:
 | [pmh_combustion](./pmh_combustion) | Equilibration and combustion of pentamethylheptane in oxygen |
 | [post_process](./post_process) | Python post-processing script to analyze kinetic energies |
 
+![msystem](https://github.com/user-attachments/assets/481c6dd3-d13f-4e81-b4ea-8b5f56b1b7d7)
 
 ## License
 
